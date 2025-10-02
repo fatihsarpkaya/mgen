@@ -1,5 +1,5 @@
 import platform
-from distutils.core import setup, Extension
+from setuptools import setup, Extension
 
 # Note that the 'mgen' package has a dependency
 # on the Protolib Python 'protokit' package and
