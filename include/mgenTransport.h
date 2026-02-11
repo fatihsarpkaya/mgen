@@ -8,8 +8,6 @@
 
 #ifdef __linux__
 #include <linux/tcp.h>
-#include <netinet/tcp.h>
-#include <sys/time.h>
 #include <stdint.h>
 #endif
 
