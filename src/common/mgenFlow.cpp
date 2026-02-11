@@ -1159,6 +1159,17 @@ bool MgenFlow::SendMessage()
             tx_timer.Deactivate();
             flow_transport->StartOutputNotification();
         }
+        
+        // Log TCP-level stats (RTT, cwnd, throughput, etc.) if enabled
+#ifdef __linux__
+        if (protocol == TCP && mgen.GetLogTcpInfo())
+        {
+            MgenTcpTransport* tcpTransport = static_cast<MgenTcpTransport*>(flow_transport);
+            if (tcpTransport != NULL)
+                tcpTransport->LogTcpInfo(mgen.GetLogFile(), mgen.GetLocalTime(), flow_id);
+        }
+#endif
+        
         return true;
     }
 

@@ -6,6 +6,13 @@
 #include "mgenMsg.h"
 #include "mgenEvent.h"
 
+#ifdef __linux__
+#include <linux/tcp.h>
+#include <netinet/tcp.h>
+#include <sys/time.h>
+#include <stdint.h>
+#endif
+
 class MgenController;
 class MgenFlowList;
 class MgenFlow;
@@ -384,6 +391,11 @@ class MgenTcpTransport : public MgenSocketTransport
     virtual void SetEventOptions(const MgenEvent* theEvent);
     void ScheduleReconnect(ProtoSocket& theSocket);
     
+#ifdef __linux__
+    bool GetTcpInfo(struct tcp_info& info);
+    void LogTcpInfo(FILE* logFile, bool localTime, UINT32 flowId);
+#endif
+
 private:
     bool                    is_client;
     MgenMsg                 tx_msg;
@@ -405,6 +417,18 @@ private:
 
     int                     retry_count;
     unsigned int            retry_delay;
+
+#ifdef __linux__
+    // State for computing TCP throughput/goodput deltas
+    struct TcpInfoPrev {
+        struct timeval  sample_time;
+        uint64_t        bytes_sent;
+        uint64_t        bytes_acked;
+        uint64_t        bytes_retrans;
+        uint32_t        total_retrans;
+        bool            valid;
+    } tcp_info_prev;
+#endif
 }; // end class MgenTcpTransport
 
 /**

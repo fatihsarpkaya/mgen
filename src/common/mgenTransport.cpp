@@ -1093,6 +1093,10 @@ MgenTcpTransport::MgenTcpTransport(Mgen& theMgen,
 
   socket.SetListener(this,&MgenTcpTransport::OnEvent);
 
+#ifdef __linux__
+  memset(&tcp_info_prev, 0, sizeof(tcp_info_prev));
+  tcp_info_prev.valid = false;
+#endif
 }
 
 MgenTcpTransport::~MgenTcpTransport()
@@ -2191,4 +2195,75 @@ void MgenTransport::ProcessRecvMessage(MgenMsg& msg, const ProtoTime& theTime)
 }  // end MgenTransport::ProcessRecvMessage()
 
 
+#ifdef __linux__
+
+bool MgenTcpTransport::GetTcpInfo(struct tcp_info& info)
+{
+    if (!socket.IsConnected()) return false;
+    socklen_t len = sizeof(info);
+    int fd = (int)socket.GetHandle();
+    return (getsockopt(fd, IPPROTO_TCP, TCP_INFO, &info, &len) == 0);
+}
+
+void MgenTcpTransport::LogTcpInfo(FILE* logFile, bool localTime, UINT32 flowId)
+{
+    if (NULL == logFile) return;
+
+    struct tcp_info info;
+    memset(&info, 0, sizeof(info));
+    if (!GetTcpInfo(info)) return;
+
+    struct timeval now;
+    ProtoSystemTime(now);
+
+    // Compute delta-based rates if we have a previous sample
+    double throughput_kbps = 0.0;
+    double goodput_kbps    = 0.0;
+
+    if (tcp_info_prev.valid)
+    {
+        double dt = (double)(now.tv_sec  - tcp_info_prev.sample_time.tv_sec) +
+                    (double)(now.tv_usec - tcp_info_prev.sample_time.tv_usec) * 1.0e-06;
+        if (dt > 0.0)
+        {
+            uint64_t d_sent  = info.tcpi_bytes_sent  - tcp_info_prev.bytes_sent;
+            uint64_t d_acked = info.tcpi_bytes_acked - tcp_info_prev.bytes_acked;
+
+            throughput_kbps = ((double)d_sent  * 8.0e-03) / dt;  // kbps
+            goodput_kbps    = ((double)d_acked * 8.0e-03) / dt;  // kbps
+        }
+    }
+
+    // Log the TCPINFO line
+    Mgen::LogTimestamp(logFile, now, localTime);
+    Mgen::Log(logFile,
+        "TCPINFO flow>%lu "
+        "rtt_us>%u rttvar_us>%u min_rtt_us>%u "
+        "cwnd>%u ssthresh>%u "
+        "throughput_kbps>%.3f goodput_kbps>%.3f delivery_rate_kbps>%.3f "
+        "total_retrans>%u lost>%u "
+        "pacing_rate_kbps>%.3f\n",
+        (unsigned long)flowId,
+        info.tcpi_rtt,                                   // smoothed RTT in microseconds
+        info.tcpi_rttvar,                                // RTT variance in microseconds
+        info.tcpi_min_rtt,                               // minimum RTT in microseconds
+        info.tcpi_snd_cwnd,                              // cwnd in segments
+        info.tcpi_snd_ssthresh,                          // ssthresh in segments
+        throughput_kbps,                                 // sending throughput (kbps)
+        goodput_kbps,                                    // goodput / receiver rate (kbps)
+        (double)info.tcpi_delivery_rate * 8.0e-03,       // kernel delivery rate (kbps)
+        info.tcpi_total_retrans,                         // cumulative retransmissions
+        info.tcpi_lost,                                  // currently-estimated lost packets
+        (double)info.tcpi_pacing_rate * 8.0e-03);        // pacing rate (kbps)
+
+    // Save state for next delta computation
+    tcp_info_prev.sample_time   = now;
+    tcp_info_prev.bytes_sent    = info.tcpi_bytes_sent;
+    tcp_info_prev.bytes_acked   = info.tcpi_bytes_acked;
+    tcp_info_prev.bytes_retrans = info.tcpi_bytes_retrans;
+    tcp_info_prev.total_retrans = info.tcpi_total_retrans;
+    tcp_info_prev.valid         = true;
+}
+
+#endif // __linux__
 

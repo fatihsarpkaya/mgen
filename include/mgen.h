@@ -170,7 +170,8 @@ class Mgen
       PAUSE,     // Pauses flow while tcp attempts to reconnect
       RECONNECT, // Enables TCP reconnect
       EPOCH_TIMESTAMP, // Log timetamp as epoch time in sec.usec format
-      RESET
+      RESET,
+      TCPINFO    // Enable TCP-level stats logging (RTT, cwnd, throughput, etc.)
     };
 
     static Command GetCommandFromString(const char* string);
@@ -233,6 +234,11 @@ class Mgen
         {report_analytics = true;}
     bool ReportAnalytics() const
         {return report_analytics;}
+    
+    void SetLogTcpInfo(bool state)
+        {log_tcp_info = state;}
+    bool GetLogTcpInfo() const
+        {return log_tcp_info;}
     
     void SetDefaultSocketType(ProtoAddress::Type addrType) 
     {addr_type = addrType;}
@@ -544,6 +550,7 @@ class Mgen
     double             analytic_window;
     bool               compute_analytics; // measure and log analytics for recv flows
     bool               report_analytics;  // include analytic reports in message payload for all flows
+    bool               log_tcp_info;      // log TCP-level stats (RTT, cwnd, throughput, etc.)
     MgenEvent::FlowStatus flow_status;    // keeps state for received MgenFlowCommands
     
     MgenPositionFunc*  get_position;
