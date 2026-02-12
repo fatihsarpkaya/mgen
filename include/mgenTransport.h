@@ -391,7 +391,7 @@ class MgenTcpTransport : public MgenSocketTransport
     
 #ifdef __linux__
     bool GetTcpInfo(struct tcp_info& info);
-    void LogTcpInfo(FILE* logFile, bool localTime, UINT32 flowId);
+    void LogTcpInfo(FILE* logFile, bool localTime, UINT32 flowId, double windowSize);
 #endif
 
 private:
@@ -417,15 +417,24 @@ private:
     unsigned int            retry_delay;
 
 #ifdef __linux__
-    // State for computing TCP throughput/goodput deltas
-    struct TcpInfoPrev {
-        struct timeval  sample_time;
-        uint64_t        bytes_sent;
-        uint64_t        bytes_acked;
-        uint64_t        bytes_retrans;
-        uint32_t        total_retrans;
+    // Windowed TCP stats accumulation state
+    struct TcpInfoWindow {
         bool            valid;
-    } tcp_info_prev;
+        struct timeval  window_start;
+        // Byte/retrans counters at window start
+        uint64_t        start_bytes_sent;
+        uint64_t        start_bytes_acked;
+        uint32_t        start_total_retrans;
+        // RTT: sum for average, min, max (microseconds)
+        double          rtt_sum;
+        uint32_t        rtt_min;
+        uint32_t        rtt_max;
+        // CWND: min, max (segments)
+        uint32_t        cwnd_min;
+        uint32_t        cwnd_max;
+        // Sample count
+        unsigned long   sample_count;
+    } tcp_info_win;
 #endif
 }; // end class MgenTcpTransport
 

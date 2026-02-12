@@ -1166,7 +1166,7 @@ bool MgenFlow::SendMessage()
         {
             MgenTcpTransport* tcpTransport = static_cast<MgenTcpTransport*>(flow_transport);
             if (tcpTransport != NULL)
-                tcpTransport->LogTcpInfo(mgen.GetLogFile(), mgen.GetLocalTime(), flow_id);
+                tcpTransport->LogTcpInfo(mgen.GetLogFile(), mgen.GetLocalTime(), flow_id, mgen.GetTcpInfoWindow());
         }
 #endif
         

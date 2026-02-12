@@ -112,7 +112,7 @@ Mgen::Mgen(ProtoTimerMgr&         timerMgr,
   checksum_enable(false), 
   addr_type(ProtoAddress::IPv4), 
   analytic_window(MgenAnalytic::DEFAULT_WINDOW),
-  compute_analytics(false), report_analytics(false), log_tcp_info(false),
+  compute_analytics(false), report_analytics(false), log_tcp_info(false), tcp_info_window(1.0),
   get_position(NULL), get_position_data(NULL),
   log_file(NULL), log_binary(false), local_time(false), log_flush(false), 
   log_file_lock(false), log_tx(false), log_rx(true), log_open(false), log_empty(true),
@@ -1451,7 +1451,7 @@ const StringMapper Mgen::COMMAND_LIST[] =
     {"+PAUSE",      PAUSE},
     {"+RECONNECT",  RECONNECT},
     {"-EPOCHTIMESTAMP", EPOCH_TIMESTAMP},
-    {"-TCPINFO",    TCPINFO},
+    {"+TCPINFO",    TCPINFO},
     {"+OFF",        INVALID_COMMAND},  // to deconflict "offset" from "off" event
     {NULL,          INVALID_COMMAND}   
 };
@@ -1918,6 +1918,16 @@ bool Mgen::OnCommand(Mgen::Command cmd, const char* arg, bool override)
     
     case TCPINFO:
         log_tcp_info = true;
+        if (NULL != arg)
+        {
+            double windowSize;
+            if ((1 != sscanf(arg, "%lf", &windowSize)) || (windowSize <= 0.0))
+            {
+                PLOG(PL_ERROR, "Mgen::OnCommand() Error: invalid TCPINFO window interval\n");
+                return false;
+            }
+            tcp_info_window = windowSize;
+        }
         break;
         
     case WINDOW:
