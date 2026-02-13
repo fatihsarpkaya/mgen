@@ -1,0 +1,20 @@
+# ============================================================
+# Video Call Uplink Traffic — TCP version
+# ============================================================
+# Emulates video call uplink (camera feed to remote peer).
+# HD video calls (Zoom/Meet/Teams) typically send 1.5-4 Mbps.
+#
+# Rate:   ~3 Mbps (375 KB/s)
+# Pattern: 50 packets/sec x 7500 bytes (20ms video frame cadence)
+#          Kernel will segment each 7500B write into ~5 TCP segments.
+# Direction: CLIENT -> SERVER (uplink)
+#
+# Run on: client/sender machine
+# Receiver needs: mgen input "0.0 LISTEN TCP 5002"
+# Duration: 30 seconds
+# ============================================================
+
+TCPINFO 1.0
+
+0.0  ON  1 TCP DST 10.0.5.100/5002 PERIODIC [50 7500]
+30.0 OFF 1

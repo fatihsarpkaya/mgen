@@ -1,0 +1,40 @@
+# ============================================================
+# Video Streaming Downlink Traffic — TCP
+# ============================================================
+# Emulates adaptive video streaming (DASH/HLS) with burst/gap
+# pattern. The streaming server fetches segments ahead of
+# playback, then idles until the next segment is needed.
+#
+# Pattern: 25 Mbps burst for 2.5s, then 3.5s gap (6s cycle)
+# Rate during burst: 25 Mbps = ~2158 pps x 1448 bytes
+# Direction: SERVER -> CLIENT (downlink)
+#
+# Run on: server/sender machine (sends toward client)
+# Receiver needs: mgen input "0.0 LISTEN TCP 5003"
+# Duration: 30 seconds (5 burst/gap cycles)
+#
+# NOTE: Each ON/OFF cycle creates a new TCP connection
+# (like separate HTTP segment requests in real streaming).
+# ============================================================
+
+TCPINFO 1.0
+
+# Cycle 1: burst 0.0-2.5s
+0.0   ON  1 TCP DST 10.0.5.200/5003 PERIODIC [2158 1448]
+2.5   OFF 1
+
+# Cycle 2: burst 6.0-8.5s
+6.0   ON  1 TCP DST 10.0.5.200/5003 PERIODIC [2158 1448]
+8.5   OFF 1
+
+# Cycle 3: burst 12.0-14.5s
+12.0  ON  1 TCP DST 10.0.5.200/5003 PERIODIC [2158 1448]
+14.5  OFF 1
+
+# Cycle 4: burst 18.0-20.5s
+18.0  ON  1 TCP DST 10.0.5.200/5003 PERIODIC [2158 1448]
+20.5  OFF 1
+
+# Cycle 5: burst 24.0-26.5s
+24.0  ON  1 TCP DST 10.0.5.200/5003 PERIODIC [2158 1448]
+26.5  OFF 1

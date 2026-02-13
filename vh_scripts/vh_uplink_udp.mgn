@@ -1,0 +1,23 @@
+# ============================================================
+# Virtual Household — ALL UPLINK traffic (UDP version)
+# ============================================================
+# Combines gamer + video call uplink into one script.
+# Run this on the CLIENT machine (home user side).
+# UDP is more realistic for gaming (game state) and
+# video calls (WebRTC/RTP).
+#
+# Flow 1: Gamer   — 256 kbps, 64 pps x 500B (64 Hz tick)
+# Flow 2: Video Call — 3 Mbps, 312 pps x 1200B (RTP-like)
+#
+# Receiver (server) needs: mgen input "0.0 LISTEN UDP 5001-5002"
+# Duration: 30 seconds
+# ============================================================
+
+# Gamer uplink (~256 kbps, 64 Hz game tick)
+0.0  ON  1 UDP DST 10.0.5.100/5001 PERIODIC [64 500]
+
+# Video call uplink (~3 Mbps, RTP-like)
+0.0  ON  2 UDP DST 10.0.5.100/5002 PERIODIC [312 1200]
+
+30.0 OFF 1
+30.0 OFF 2

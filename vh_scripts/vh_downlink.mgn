@@ -1,0 +1,48 @@
+# ==========================================================
+# Virtual Household — DOWNLINK traffic (server -> client)
+# ==========================================================
+# Client IP: 10.0.5.200
+# Duration:  30.0s
+# Streams:   2 x 25.0 Mbps burst
+# Updates:   1 users x 4 streams
+# ==========================================================
+
+TCPINFO 1.0
+
+# --- Video streaming downlink x2 (TCP, ~25.0 Mbps burst, 2500ms on / 3500ms off) ---
+# Uses MOD to switch rates (keeps TCP connection alive throughout)
+# Stream user 1 (flow 1, port 5201)
+# Stream user 2 (flow 2, port 5202)
+# --- Background updates downlink x1 users (4 streams each = 4 TCP flows, saturating) ---
+# --- Stop background update flows ---
+
+0.0   ON  1 TCP DST 10.0.5.200/5201 PERIODIC [2158 1448]
+0.0   ON  2 TCP DST 10.0.5.200/5202 PERIODIC [2158 1448]
+0.0   ON  3 TCP DST 10.0.5.200/5301 PERIODIC [100000 1448]
+0.0   ON  4 TCP DST 10.0.5.200/5302 PERIODIC [100000 1448]
+0.0   ON  5 TCP DST 10.0.5.200/5303 PERIODIC [100000 1448]
+0.0   ON  6 TCP DST 10.0.5.200/5304 PERIODIC [100000 1448]
+2.5   MOD 1 PERIODIC [1 76]
+2.5   MOD 2 PERIODIC [1 76]
+6.0   MOD 1 PERIODIC [2158 1448]
+6.0   MOD 2 PERIODIC [2158 1448]
+8.5   MOD 1 PERIODIC [1 76]
+8.5   MOD 2 PERIODIC [1 76]
+12.0  MOD 1 PERIODIC [2158 1448]
+12.0  MOD 2 PERIODIC [2158 1448]
+14.5  MOD 1 PERIODIC [1 76]
+14.5  MOD 2 PERIODIC [1 76]
+18.0  MOD 1 PERIODIC [2158 1448]
+18.0  MOD 2 PERIODIC [2158 1448]
+20.5  MOD 1 PERIODIC [1 76]
+20.5  MOD 2 PERIODIC [1 76]
+24.0  MOD 1 PERIODIC [2158 1448]
+24.0  MOD 2 PERIODIC [2158 1448]
+26.5  MOD 1 PERIODIC [1 76]
+26.5  MOD 2 PERIODIC [1 76]
+30.0  OFF 1
+30.0  OFF 2
+30.0  OFF 3
+30.0  OFF 4
+30.0  OFF 5
+30.0  OFF 6

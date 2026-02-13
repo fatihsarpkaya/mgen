@@ -1,0 +1,19 @@
+# ==========================================================
+# Virtual Household — UPLINK traffic (client -> server)
+# ==========================================================
+# Server IP: 10.0.5.100
+# Duration:  30.0s
+# Gamers:    1 x 0.256 Mbps (TCP)
+# Calls:     1 x 3.0 Mbps (TCP)
+# ==========================================================
+
+TCPINFO 1.0
+
+# --- Gamer uplink x1 (TCP, ~0.256 Mbps each, 50 pps x 640B) ---
+# --- Video call uplink x1 (TCP, ~3.000 Mbps each, 50 pps x 7500B) ---
+# --- Stop all uplink flows ---
+
+0.0   ON  1 TCP DST 10.0.5.100/5001 PERIODIC [50 640]
+0.0   ON  2 TCP DST 10.0.5.100/5101 PERIODIC [50 7500]
+30.0  OFF 1
+30.0  OFF 2

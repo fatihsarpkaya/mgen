@@ -1,0 +1,17 @@
+# ============================================================
+# Gamer Uplink Traffic — UDP version (more realistic)
+# ============================================================
+# Real gaming (FPS/MOBA) typically uses UDP for low-latency
+# game state updates. Common tick rates: 64 Hz or 128 Hz.
+#
+# Rate:   ~256 kbps (32 KB/s)
+# Pattern: 64 pps x 500 bytes (64 Hz game tick rate)
+# Direction: CLIENT -> SERVER (uplink)
+#
+# Run on: client/sender machine
+# Receiver needs: mgen input "0.0 LISTEN UDP 5001"
+# Duration: 30 seconds
+# ============================================================
+
+0.0  ON  1 UDP DST 10.0.5.100/5001 PERIODIC [64 500]
+30.0 OFF 1

@@ -1,0 +1,17 @@
+# ============================================================
+# Video Call Uplink Traffic — UDP version (more realistic)
+# ============================================================
+# Real video calls use WebRTC (UDP/RTP). RTP packets are
+# typically ~1200 bytes to stay under common path MTUs.
+#
+# Rate:   ~3 Mbps (375 KB/s)
+# Pattern: 312 pps x 1200 bytes (RTP-like packet stream)
+# Direction: CLIENT -> SERVER (uplink)
+#
+# Run on: client/sender machine
+# Receiver needs: mgen input "0.0 LISTEN UDP 5002"
+# Duration: 30 seconds
+# ============================================================
+
+0.0  ON  1 UDP DST 10.0.5.100/5002 PERIODIC [312 1200]
+30.0 OFF 1

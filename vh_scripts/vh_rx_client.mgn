@@ -1,0 +1,9 @@
+# ============================================================
+# Virtual Household — RECEIVER on CLIENT side
+# ============================================================
+# Listens for downlink traffic (streaming + updates).
+# Run this on the CLIENT machine (home user side).
+# ============================================================
+
+# TCP ports for streaming (5003) and updates (5004)
+0.0 LISTEN TCP 5003-5004

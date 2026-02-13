@@ -1,0 +1,27 @@
+# ============================================================
+# Background Updates Downlink Traffic — TCP
+# ============================================================
+# Emulates OS/app background updates as saturating download.
+# Uses 4 concurrent TCP streams (like parallel HTTP range
+# requests or apt/yum package downloads).
+#
+# Rate:   Saturating (limited only by TCP congestion control)
+# Pattern: 4 parallel flows, each at max rate
+# Direction: SERVER -> CLIENT (downlink)
+#
+# Run on: server/sender machine (sends toward client)
+# Receiver needs: mgen input "0.0 LISTEN TCP 5004"
+# Duration: 30 seconds
+# ============================================================
+
+TCPINFO 1.0
+
+0.0  ON  1 TCP DST 10.0.5.200/5004 PERIODIC [100000 1448]
+0.0  ON  2 TCP DST 10.0.5.200/5004 PERIODIC [100000 1448]
+0.0  ON  3 TCP DST 10.0.5.200/5004 PERIODIC [100000 1448]
+0.0  ON  4 TCP DST 10.0.5.200/5004 PERIODIC [100000 1448]
+
+30.0 OFF 1
+30.0 OFF 2
+30.0 OFF 3
+30.0 OFF 4

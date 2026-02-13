@@ -1,0 +1,12 @@
+# ============================================================
+# Virtual Household — RECEIVER on SERVER side
+# ============================================================
+# Listens for uplink traffic (gamer + video call).
+# Run this on the SERVER machine (internet side).
+# ============================================================
+
+# TCP ports for gamer (5001) and video call (5002)
+0.0 LISTEN TCP 5001-5002
+
+# If running UDP versions, also listen on UDP:
+0.0 LISTEN UDP 5001-5002

@@ -1,0 +1,23 @@
+# ============================================================
+# Virtual Household — ALL UPLINK traffic (TCP version)
+# ============================================================
+# Combines gamer + video call uplink into one script.
+# Run this on the CLIENT machine (home user side).
+#
+# Flow 1: Gamer   — 256 kbps, 50 pps x 640B
+# Flow 2: Video Call — 3 Mbps, 50 pps x 7500B
+#
+# Receiver (server) needs: mgen input "0.0 LISTEN TCP 5001-5002"
+# Duration: 30 seconds
+# ============================================================
+
+TCPINFO 1.0
+
+# Gamer uplink (~256 kbps)
+0.0  ON  1 TCP DST 10.0.5.100/5001 PERIODIC [50 640]
+
+# Video call uplink (~3 Mbps)
+0.0  ON  2 TCP DST 10.0.5.100/5002 PERIODIC [50 7500]
+
+30.0 OFF 1
+30.0 OFF 2
