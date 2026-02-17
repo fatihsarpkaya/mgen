@@ -63,6 +63,7 @@ enum Protocol
     INVALID_PROTOCOL,
     UDP,
     TCP,
+    PRAGUE,
     SINK,
     SOURCE  // pseudo transport type so an mgen can have distinct source/sink transports
   }; 

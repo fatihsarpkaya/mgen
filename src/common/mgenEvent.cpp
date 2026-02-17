@@ -76,6 +76,7 @@ const StringMapper MgenBaseEvent::PROTOCOL_LIST[] =
 {
     {"UDP",     UDP}, 
     {"TCP",     TCP},
+    {"PRAGUE",  PRAGUE},
     {"SINK",    SINK},
     {"XXX",     INVALID_PROTOCOL}   
 };

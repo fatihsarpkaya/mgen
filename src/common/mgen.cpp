@@ -3,6 +3,7 @@
 #include "mgenMsg.h"
 #include "mgenVersion.h"
 #include "mgenEvent.h"
+#include "mgenPragueTransport.h"
 #include "protoString.h"  // for ProtoTokenator
 
 #include <string.h>
@@ -535,6 +536,20 @@ MgenTransport* Mgen::GetMgenTransport(Protocol theProtocol,
           transport_list.Prepend(theTransport);          
           return theTransport;
 
+          break;
+      }
+    case PRAGUE:
+      {
+          MgenPragueTransport* theTransport =
+              new MgenPragueTransport(*this, srcPort, dstAddress);
+          if (!theTransport)
+          {
+              DMSG(0, "Mgen::GetMgenTransport() Prague transport allocation error: %s\n",
+                   GetErrorString());
+              return NULL;
+          }
+          transport_list.Prepend(theTransport);
+          return theTransport;
           break;
       }
     case SINK:

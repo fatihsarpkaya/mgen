@@ -154,6 +154,9 @@ class MgenTransport
         case TCP:
           return ProtoSocket::TCP;
           break;
+        case PRAGUE:
+          return ProtoSocket::UDP;
+          break;
         default:
           DMSG(0,"SocketTransport::SocketTransport() Error: Invalid protocol specified.\n");
           return ProtoSocket::INVALID_PROTOCOL;

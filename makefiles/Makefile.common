@@ -11,8 +11,9 @@ COMMON = ../src/common
 PYTHON = ../src/python
 INCLUDE = ../include
 UNIX = ../makefiles
+PRAGUE_DIR = ../../udp_prague
 
-INCLUDES = $(SYSTEM_INCLUDES) -I$(UNIX) -I$(INCLUDE) -I$(PROTOLIB)/include
+INCLUDES = $(SYSTEM_INCLUDES) -I$(UNIX) -I$(INCLUDE) -I$(PROTOLIB)/include -I$(PRAGUE_DIR)
 
 CFLAGS = -g -DPROTO_DEBUG -DHAVE_GPS -DUNIX -Wall -Wcast-align -fPIC $(SYSTEM_HAVES) $(INCLUDES) $(ADDED_CFLAGS)
 
@@ -41,15 +42,18 @@ MGEN_SRC = $(COMMON)/mgen.cpp $(COMMON)/mgenEvent.cpp \
            $(COMMON)/mgenTransport.cpp $(COMMON)/mgenPattern.cpp \
      	   $(COMMON)/mgenPayload.cpp $(COMMON)/mgenAnalytic.cpp \
            $(COMMON)/mgenSequencer.cpp \
-           $(COMMON)/gpsPub.cpp $(COMMON)/mgenAppSinkTransport.cpp
+           $(COMMON)/gpsPub.cpp $(COMMON)/mgenAppSinkTransport.cpp \
+           $(COMMON)/mgenPragueTransport.cpp
+
+PRAGUE_LIB = $(PRAGUE_DIR)/libprague.a
           
 MGEN_OBJ = $(MGEN_SRC:.cpp=.o)
     
 MGEN_APP_SRC = $(COMMON)/mgenApp.cpp
 MGEN_APP_OBJ = $(MGEN_APP_SRC:.cpp=.o) 
 
-mgen:    $(MGEN_APP_OBJ) $(MGEN_OBJ) $(LIBPROTO)
-	$(CC) -g $(CFLAGS) -o $@ $(MGEN_APP_OBJ) $(MGEN_OBJ) $(LDFLAGS) $(LIBPROTO) $(LIBS) 
+mgen:    $(MGEN_APP_OBJ) $(MGEN_OBJ) $(LIBPROTO) $(PRAGUE_LIB)
+	$(CC) -g $(CFLAGS) -o $@ $(MGEN_APP_OBJ) $(MGEN_OBJ) $(LDFLAGS) $(LIBPROTO) $(PRAGUE_LIB) $(LIBS) 
 
 MPMGR_SRC = $(COMMON)/mpmgr.cpp $(COMMON)/gpsPub.cpp
 
