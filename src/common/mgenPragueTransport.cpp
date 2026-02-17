@@ -42,6 +42,8 @@ MgenPragueTransport::MgenPragueTransport(Mgen&               theMgen,
 {
     socket.SetListener(this, &MgenPragueTransport::OnEvent);
     memset(pkts_stat, 0, sizeof(pkts_stat));
+    memset(&prague_info_win, 0, sizeof(prague_info_win));
+    prague_info_win.valid = false;
 }
 
 MgenPragueTransport::~MgenPragueTransport()
@@ -323,6 +325,149 @@ MessageStatus MgenPragueTransport::SendMessage(MgenMsg& theMsg,
     LogEvent(SEND_EVENT, &theMsg, theMsg.GetTxTime(), txBuffer);
 
     return MSG_SEND_OK;
+}
+
+// ---------------------------------------------------------------
+// LogPragueInfo -- Windowed Prague CC stats (analogous to LogTcpInfo)
+// ---------------------------------------------------------------
+
+void MgenPragueTransport::LogPragueInfo(FILE*  logFile,
+                                        bool   localTime,
+                                        UINT32 flowId,
+                                        double windowSize)
+{
+    if (NULL == logFile) return;
+
+    // Gather current instantaneous stats from PragueCC
+    PragueState stats;
+    pragueCC.GetStats(stats);
+
+    rate_tp   cur_rate   = stats.m_pacing_rate;
+    count_tp  cur_window = stats.m_packet_window;
+    time_tp   cur_srtt   = stats.m_srtt;
+    prob_tp   cur_alpha  = stats.m_alpha;  // fixed-point, PROB_SHIFT=20
+    cs_tp     cur_state  = stats.m_cc_state;
+
+    const char* state_name;
+    switch (cur_state)
+    {
+        case cs_init:       state_name = "init";       break;
+        case cs_cong_avoid: state_name = "cong_avoid"; break;
+        case cs_in_loss:    state_name = "in_loss";    break;
+        case cs_in_cwr:     state_name = "in_cwr";     break;
+        default:            state_name = "unknown";    break;
+    }
+
+    struct timeval now;
+    ProtoSystemTime(now);
+
+    if (!prague_info_win.valid)
+    {
+        // First sample: initialize the window
+        prague_info_win.valid        = true;
+        prague_info_win.window_start = now;
+        prague_info_win.rate_sum     = (double)cur_rate;
+        prague_info_win.rate_min     = cur_rate;
+        prague_info_win.rate_max     = cur_rate;
+        prague_info_win.rtt_sum      = (double)cur_srtt;
+        prague_info_win.rtt_min      = cur_srtt;
+        prague_info_win.rtt_max      = cur_srtt;
+        prague_info_win.alpha_sum    = (double)cur_alpha;
+        prague_info_win.alpha_min    = cur_alpha;
+        prague_info_win.alpha_max    = cur_alpha;
+        prague_info_win.cwnd_min     = cur_window;
+        prague_info_win.cwnd_max     = cur_window;
+        prague_info_win.start_seqnr  = seqnr;
+        prague_info_win.start_lost   = pkts_lost;
+        prague_info_win.sample_count = 1;
+        return;
+    }
+
+    // Accumulate within the current window
+    prague_info_win.rate_sum += (double)cur_rate;
+    if (cur_rate < prague_info_win.rate_min)  prague_info_win.rate_min = cur_rate;
+    if (cur_rate > prague_info_win.rate_max)  prague_info_win.rate_max = cur_rate;
+
+    prague_info_win.rtt_sum += (double)cur_srtt;
+    if (cur_srtt < prague_info_win.rtt_min)   prague_info_win.rtt_min = cur_srtt;
+    if (cur_srtt > prague_info_win.rtt_max)   prague_info_win.rtt_max = cur_srtt;
+
+    prague_info_win.alpha_sum += (double)cur_alpha;
+    if (cur_alpha < prague_info_win.alpha_min) prague_info_win.alpha_min = cur_alpha;
+    if (cur_alpha > prague_info_win.alpha_max) prague_info_win.alpha_max = cur_alpha;
+
+    if (cur_window < prague_info_win.cwnd_min) prague_info_win.cwnd_min = cur_window;
+    if (cur_window > prague_info_win.cwnd_max) prague_info_win.cwnd_max = cur_window;
+
+    prague_info_win.sample_count++;
+
+    // Check if the window has elapsed
+    double elapsed = (double)(now.tv_sec  - prague_info_win.window_start.tv_sec) +
+                     (double)(now.tv_usec - prague_info_win.window_start.tv_usec) * 1.0e-06;
+
+    if (elapsed < windowSize) return;
+
+    // === Window complete: compute and log the report ===
+
+    double rate_avg  = prague_info_win.rate_sum / (double)prague_info_win.sample_count;
+    double rtt_avg   = prague_info_win.rtt_sum  / (double)prague_info_win.sample_count;
+    // Convert fixed-point alpha (PROB_SHIFT=20) to fraction [0.0 .. 1.0]
+    double alpha_scale = 1.0 / (double)(1 << 20);
+    double alpha_avg = (prague_info_win.alpha_sum / (double)prague_info_win.sample_count) * alpha_scale;
+
+    // Throughput in kbps from pacing rate (Bytes/s)
+    double throughput_kbps = rate_avg * 8.0e-03;
+
+    // Packets sent and lost in this window
+    count_tp window_sent = seqnr - prague_info_win.start_seqnr;
+    count_tp window_lost = pkts_lost - prague_info_win.start_lost;
+
+    Mgen::LogTimestamp(logFile, now, localTime);
+    Mgen::Log(logFile,
+        "PRAGUEINFO flow>%lu window>%.3f samples>%lu "
+        "state>%s "
+        "rtt_avg_us>%.0f rtt_min_us>%lld rtt_max_us>%lld "
+        "cwnd>%u cwnd_min>%u cwnd_max>%u "
+        "rate_avg_kbps>%.3f rate_min_kbps>%.3f rate_max_kbps>%.3f "
+        "alpha_avg>%.6f alpha_min>%.6f alpha_max>%.6f "
+        "inflight>%u sent>%u lost>%u total_lost>%u\n",
+        (unsigned long)flowId,
+        elapsed,
+        prague_info_win.sample_count,
+        state_name,
+        rtt_avg,
+        (long long)prague_info_win.rtt_min,
+        (long long)prague_info_win.rtt_max,
+        cur_window,
+        prague_info_win.cwnd_min,
+        prague_info_win.cwnd_max,
+        throughput_kbps,
+        (double)prague_info_win.rate_min * 8.0e-03,
+        (double)prague_info_win.rate_max * 8.0e-03,
+        alpha_avg,
+        (double)prague_info_win.alpha_min * alpha_scale,
+        (double)prague_info_win.alpha_max * alpha_scale,
+        inflight,
+        window_sent,
+        window_lost,
+        pkts_lost);
+
+    // Reset window for next interval
+    prague_info_win.window_start = now;
+    prague_info_win.rate_sum     = (double)cur_rate;
+    prague_info_win.rate_min     = cur_rate;
+    prague_info_win.rate_max     = cur_rate;
+    prague_info_win.rtt_sum      = (double)cur_srtt;
+    prague_info_win.rtt_min      = cur_srtt;
+    prague_info_win.rtt_max      = cur_srtt;
+    prague_info_win.alpha_sum    = (double)cur_alpha;
+    prague_info_win.alpha_min    = cur_alpha;
+    prague_info_win.alpha_max    = cur_alpha;
+    prague_info_win.cwnd_min     = cur_window;
+    prague_info_win.cwnd_max     = cur_window;
+    prague_info_win.start_seqnr  = seqnr;
+    prague_info_win.start_lost   = pkts_lost;
+    prague_info_win.sample_count = 1;
 }
 
 // ---------------------------------------------------------------

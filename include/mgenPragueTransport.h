@@ -29,6 +29,9 @@ class MgenPragueTransport : public MgenSocketTransport
     bool Listen(UINT16 port, ProtoAddress::Type addrType, bool bindOnOpen);
     bool IsConnected() { return true; }
 
+    // Windowed Prague CC stats logging (analogous to LogTcpInfo for TCP)
+    void LogPragueInfo(FILE* logFile, bool localTime, UINT32 flowId, double windowSize);
+
   private:
     // ECN-aware send/recv using raw fd (mirrors udp_prague/udpsocket.cpp)
     ssize_t SendToWithEcn(const char* buf, size_t len,
@@ -50,6 +53,26 @@ class MgenPragueTransport : public MgenSocketTransport
     // Sender-side packet tracking for ACK processing
     pktsend_tp pkts_stat[PKT_BUFFER_SIZE];
     count_tp   pkts_lost;
+
+    // Windowed stats accumulator for PRAGUEINFO logging
+    struct PragueInfoWindow {
+        bool           valid;
+        struct timeval window_start;
+        double         rate_sum;       // pacing_rate accumulator (Bytes/s)
+        rate_tp        rate_min;
+        rate_tp        rate_max;
+        double         rtt_sum;        // RTT accumulator (microseconds)
+        time_tp        rtt_min;
+        time_tp        rtt_max;
+        double         alpha_sum;      // ECN alpha accumulator (fixed-point, PROB_SHIFT=20)
+        prob_tp        alpha_min;
+        prob_tp        alpha_max;
+        count_tp       cwnd_min;
+        count_tp       cwnd_max;
+        count_tp       start_seqnr;    // seqnr at window start
+        count_tp       start_lost;     // pkts_lost at window start
+        unsigned long  sample_count;
+    } prague_info_win;
 };
 
 #endif // _MGEN_PRAGUE_TRANSPORT

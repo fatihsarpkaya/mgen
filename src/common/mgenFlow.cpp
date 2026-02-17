@@ -2,6 +2,7 @@
 #include "mgenMsg.h"
 #include "mgen.h"
 #include "mgenGlobals.h"
+#include "mgenPragueTransport.h"
 #include <time.h>  // for gmtime(), struct tm, etc
 
 #ifndef ENABLE_EVENT_VALIDATION
@@ -1169,6 +1170,13 @@ bool MgenFlow::SendMessage()
                 tcpTransport->LogTcpInfo(mgen.GetLogFile(), mgen.GetLocalTime(), flow_id, mgen.GetTcpInfoWindow());
         }
 #endif
+        // Log Prague CC stats (RTT, cwnd, pacing rate, alpha, etc.) if enabled
+        if (protocol == PRAGUE && mgen.GetLogTcpInfo())
+        {
+            MgenPragueTransport* pragueTransport = static_cast<MgenPragueTransport*>(flow_transport);
+            if (pragueTransport != NULL)
+                pragueTransport->LogPragueInfo(mgen.GetLogFile(), mgen.GetLocalTime(), flow_id, mgen.GetTcpInfoWindow());
+        }
         
         return true;
     }
