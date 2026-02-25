@@ -2274,7 +2274,7 @@ void MgenTcpTransport::LogTcpInfo(FILE* logFile, bool localTime, UINT32 flowId, 
         "rtt_avg_us>%.0f rtt_min_us>%u rtt_max_us>%u "
         "cwnd>%u cwnd_min>%u cwnd_max>%u "
         "throughput_kbps>%.3f goodput_kbps>%.3f "
-        "retrans>%u total_retrans>%u\n",
+        "retrans>%u total_retrans>%u bytes_acked>%llu\n",
         (unsigned long)flowId,
         elapsed,                                  // actual window duration
         tcp_info_win.sample_count,                // samples in this window
@@ -2287,7 +2287,8 @@ void MgenTcpTransport::LogTcpInfo(FILE* logFile, bool localTime, UINT32 flowId, 
         throughput_kbps,                          // avg throughput over window (kbps)
         goodput_kbps,                             // avg goodput over window (kbps)
         window_retrans,                           // retransmissions in this window
-        info.tcpi_total_retrans);                 // cumulative total retransmissions
+        info.tcpi_total_retrans,                  // cumulative total retransmissions
+        (unsigned long long)info.tcpi_bytes_acked); // cumulative bytes acknowledged
 
     // Reset window for next interval
     tcp_info_win.window_start        = now;
