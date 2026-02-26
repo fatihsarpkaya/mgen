@@ -35,6 +35,10 @@ MgenFlow::MgenFlow(unsigned int         flowId,
     event_timer.SetInterval(1.0);
     event_timer.SetRepeat(-1);
 
+    tcpinfo_timer.SetListener(this, &MgenFlow::OnTcpInfoTimeout);
+    tcpinfo_timer.SetInterval(0.1);  // default, overridden by mgen.GetTcpInfoWindow()
+    tcpinfo_timer.SetRepeat(-1);
+
     flow_command.InitIntoBuffer(MgenFlowCommand::DATA_ITEM_FLOW_CMD, command_buffer, 12);
 }
 
@@ -42,6 +46,7 @@ MgenFlow::~MgenFlow()
 {
     if (event_timer.IsActive()) event_timer.Deactivate();
     if (tx_timer.IsActive()) tx_timer.Deactivate();
+    if (tcpinfo_timer.IsActive()) tcpinfo_timer.Deactivate();
     event_list.Destroy();
     if (flow_transport && flow_transport->IsOpen()) flow_transport->Close(); 
 }
@@ -359,6 +364,15 @@ bool MgenFlow::DoOnEvent(const MgenEvent* event)
     theMsg.SetDstAddr(dst_addr);
     theMsg.GetSrcAddr().SetPort(flow_transport->GetSrcPort());
     flow_transport->LogEvent(ON_EVENT,&theMsg,currentTime);
+
+    // Start periodic TCPINFO timer so we log bytes_acked even when not sending
+    if ((protocol == TCP || protocol == PRAGUE) && mgen.GetLogTcpInfo())
+    {
+        tcpinfo_timer.SetInterval(mgen.GetTcpInfoWindow());
+        if (!tcpinfo_timer.IsActive())
+            timer_mgr.ActivateTimer(tcpinfo_timer);
+    }
+
     return true;
 
 } // MgenFlow::DoOnEvent
@@ -455,7 +469,8 @@ bool MgenFlow::DoModEvent(const MgenEvent* event)
             theMsg.SetFlowId(flow_id); 
             theMsg.SetDstAddr(dst_addr); // Previous flow is being turned off
             ProtoSystemTime(currentTime);
-            flow_transport->LogEvent(OFF_EVENT,&theMsg,currentTime); 
+            flow_transport->LogEvent(OFF_EVENT,&theMsg,currentTime);
+            if (tcpinfo_timer.IsActive()) tcpinfo_timer.Deactivate();
             return true;
         }
     }
@@ -590,6 +605,14 @@ bool MgenFlow::DoModEvent(const MgenEvent* event)
     ProtoSystemTime(currentTime);
 
     flow_transport->LogEvent(ON_EVENT,&theMsg,currentTime);
+
+    // Start periodic TCPINFO timer for new TCP/PRAGUE transport
+    if ((protocol == TCP || protocol == PRAGUE) && mgen.GetLogTcpInfo())
+    {
+        tcpinfo_timer.SetInterval(mgen.GetTcpInfoWindow());
+        if (!tcpinfo_timer.IsActive())
+            timer_mgr.ActivateTimer(tcpinfo_timer);
+    }
 
     return true;
 
@@ -843,6 +866,7 @@ void MgenFlow::StopFlow()
   // remove flow from pending flows list 
   if (flow_transport) flow_transport->RemoveFlow(this);
   if (tx_timer.IsActive()) tx_timer.Deactivate();
+  if (tcpinfo_timer.IsActive()) tcpinfo_timer.Deactivate();
 
   if (flow_transport) 
     {
@@ -1550,7 +1574,28 @@ bool MgenFlow::OnEventTimeout(ProtoTimer& /*theTimer*/)
     }
 }  // end MgenFlow::OnEventTimeout()
 
-
+bool MgenFlow::OnTcpInfoTimeout(ProtoTimer& /*theTimer*/)
+{
+    // Log TCP/Prague stats on timer (even when not sending) so we can
+    // track bytes_acked after the last send (e.g. for VoD chunk delivery analysis)
+    if (!flow_transport || !mgen.GetLogTcpInfo())
+        return false;
+#ifdef __linux__
+    if (protocol == TCP)
+    {
+        MgenTcpTransport* tcpTransport = static_cast<MgenTcpTransport*>(flow_transport);
+        if (tcpTransport != NULL)
+            tcpTransport->LogTcpInfo(mgen.GetLogFile(), mgen.GetLocalTime(), flow_id, mgen.GetTcpInfoWindow());
+    }
+#endif
+    if (protocol == PRAGUE)
+    {
+        MgenPragueTransport* pragueTransport = static_cast<MgenPragueTransport*>(flow_transport);
+        if (pragueTransport != NULL)
+            pragueTransport->LogPragueInfo(mgen.GetLogFile(), mgen.GetLocalTime(), flow_id, mgen.GetTcpInfoWindow());
+    }
+    return true;  // keep timer running (repeat=-1)
+}  // end MgenFlow::OnTcpInfoTimeout()
 
 //////////////////////////////////////////////////////////////////
 // MgenFlowList implementation

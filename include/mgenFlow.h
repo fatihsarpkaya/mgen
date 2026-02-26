@@ -88,6 +88,7 @@ class MgenFlow
 	int GetMessagesSent() {return messages_sent;}
 	MgenFlow* Next() {return next;}
 	bool OnTxTimeout(ProtoTimer& theTimer);
+	bool OnTcpInfoTimeout(ProtoTimer& theTimer);
 	UINT32 GetFlowId() {return flow_id;} 
 	UINT32 GetSeqNum() {return seq_num;} 
 	void RestartTimer();
@@ -149,6 +150,7 @@ class MgenFlow
     bool                    keep_alive; // Keep flow alive after count exceeded
 
     ProtoTimer              tx_timer;  
+    ProtoTimer              tcpinfo_timer;
 
     MgenTransport*          flow_transport;               
     UINT32                  seq_num;                     
