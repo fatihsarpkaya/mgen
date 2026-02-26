@@ -432,8 +432,10 @@ bool MgenFlow::DoModEvent(const MgenEvent* event)
 
     if (event->OptionIsSet(MgenEvent::COUNT))
     {
-        message_limit = event->GetCount();
-        messages_sent = 0;
+        // Additive semantics: each MOD adds another chunk to the total budget.
+        // This avoids losing unsent packets when MOD fires before the current
+        // chunk is complete (e.g. fixed request times at 0,2,4,... with backlog).
+        message_limit += event->GetCount();
         keep_alive = event->GetKeepAlive();
     }
 
@@ -638,8 +640,13 @@ bool MgenFlow::DoGenericEvent(const MgenEvent* event)
 
     if (event->OptionIsSet(MgenEvent::COUNT))
     {
-        messages_sent = 0;
-        message_limit = event->GetCount();
+        // For ON: reset and set initial budget. For MOD: additive semantics
+        // are handled in DoModEvent (message_limit += count).
+        if (event->GetType() == MgenEvent::ON)
+        {
+            messages_sent = 0;
+            message_limit = event->GetCount();
+        }
     }          
 
     char* payloadString = event->GetPayload();
